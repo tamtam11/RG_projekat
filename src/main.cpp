@@ -224,7 +224,7 @@ int main() {
     spotLight.constant = 1.0f;
     spotLight.linear = 0.05f;
     spotLight.quadratic = 0.012f;
-    
+
     spotLight.cutOff = glm::cos(glm::radians(10.5f));
     spotLight.outerCutOff = glm::cos(glm::radians(13.0f));
 
@@ -426,11 +426,8 @@ int main() {
         // don't forget to enable shader before setting uniforms
         ourShader.use();
         pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
-      //  pointLight.position = programState->vecCalibrate;
 
-      ourShader.setVec3("pointLight.position", pointLight.position);
-
-      //  ourShader.setVec3("pointLight.position", glm::vec3(cos(currentFrame)*2.0f,cos(currentFrame*2.0f)+4.35f,sin(currentFrame)*2.0f));
+        ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", programState->pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", programState->pointLight.diffuse);
         ourShader.setVec3("pointLight.specular", programState->pointLight.specular);
@@ -467,16 +464,6 @@ int main() {
 
         ourShader.use();
         ourShader.setVec3("moon.position", pointLightPosition);
-        /*
-        lightShader.use();
-        glm::mat4 modelMoon = glm::mat4 (1.0f);
-        modelMoon = glm::translate(modelMoon, glm::vec3(10.0f));
-        modelMoon = glm::scale(modelMoon, glm::vec3(2.0f));
-        lightShader.setMat4("model", modelMoon);
-        lightShader.setVec3("moon.position", pointLightPosition);
-        moon.Draw(lightShader);
-
-*/
 
         // draw skybox
         //___________________________________________________________________________________________
