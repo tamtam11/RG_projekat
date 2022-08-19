@@ -62,7 +62,7 @@ struct SpotLight {
     glm::vec3 specular;
 };
 
-void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight);
+void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight, vector<glm::vec3> lightPos);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -86,7 +86,6 @@ float deltaTime = 1.0f;
 float lastFrame = 0.0f;
 
 struct ProgramState {
-    glm::vec3 vecCalibrate = glm::vec3(0.0f);
 
     glm::vec3 clearColor = glm::vec3(0.8f,0.8f,1.0f);
     bool ImGuiEnabled = false;
@@ -98,8 +97,6 @@ struct ProgramState {
     SpotLight spotLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 3.0f)) {}
-
-    glm::vec3 vecRotate = glm::vec3(0.0f);
 
     //Skybox
     vector<std::string> faces;
@@ -210,23 +207,23 @@ int main() {
     pointLight.diffuse = glm::vec3(0.9, 0.9, 0.9);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
-    pointLight.constant = 0.02f;
-    pointLight.linear = 0.01f;
-    pointLight.quadratic = 0.01f;
+    pointLight.constant = 0.008f;
+    pointLight.linear = 0.04f;
+    pointLight.quadratic = 0.04f;
 
     SpotLight& spotLight = programState->spotLight;
     spotLight.position = programState->camera.Position;
     spotLight.direction = programState->camera.Front;
-    spotLight.ambient = glm::vec3 (1.0f);
+    spotLight.ambient = glm::vec3 (0.5f);
     spotLight.diffuse = glm::vec3 (0.9f);
 
-    spotLight.specular = glm::vec3 (0.5f, 0.5f, 0.5f);
-    spotLight.constant = 1.0f;
-    spotLight.linear = 0.05f;
-    spotLight.quadratic = 0.012f;
+    spotLight.specular = glm::vec3 (1.5f, 1.5f, 1.5f);
+    spotLight.constant = 0.0003f;
+    spotLight.linear = 0.0009f;
+    spotLight.quadratic = 0.0009f;
 
-    spotLight.cutOff = glm::cos(glm::radians(10.5f));
-    spotLight.outerCutOff = glm::cos(glm::radians(13.0f));
+    spotLight.cutOff = glm::cos(glm::radians(5.5f));
+    spotLight.outerCutOff = glm::cos(glm::radians(7.0f));
 
     // build and compile shaders
     // -------------------------
@@ -238,8 +235,8 @@ int main() {
     // load models
     // -----------
 
-    Model ballModel("resources/objects/ball/Pallone/Ball OBJ.obj");
-    ballModel.SetShaderTextureNamePrefix("material.");
+    Model grassModel("resources/objects/grass/grass.obj");
+    grassModel.SetShaderTextureNamePrefix("material.");
 
     Model roseModel("resources/objects/rose/Models and Textures/rose.obj");
     roseModel.SetShaderTextureNamePrefix("material.");
@@ -385,7 +382,35 @@ int main() {
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
-   // glm::vec3 pointLightPositions[5];
+    vector<glm::vec3> grassPos {
+            glm::vec3(50.0f,0.0f,-10.0f),
+            glm::vec3(40.0f,-5.0f,-15.0f),
+            glm::vec3(35.0f,5.0f,-10.0f),
+            glm::vec3(60.0f,10.0f,-20.0f),
+            glm::vec3(55.0f,-10.0f,-15.f),
+            glm::vec3(65.0f,-10.0f,-5.0f),
+            glm::vec3(45.0f,-10.f,-20.0f),
+            glm::vec3(65.0f,0.0f,-15.0f)
+    };
+
+    // na samo tri mesta postaviti ruze
+    vector<glm::vec3> rosePos {
+            glm::vec3(40.0f,-5.0f,-16.0f),
+            glm::vec3(65.0f,-10.0f,-6.0f),
+            glm::vec3(65.0f,0.0f,-16.0f)
+    };
+
+    vector<glm::vec3> lightPos {
+            glm::vec3(45.0f,5.0f,-5.0f),
+            glm::vec3(35.0f,0.0f,-10.0f),
+            glm::vec3(30.0f,10.0f,5.0f),
+            glm::vec3(55.0f,15.0f,-5.0f),
+            glm::vec3(50.0f,-10.0f,0.0f),
+            glm::vec3(60.0f,-10.0f,10.0f),
+            glm::vec3(40.0f,-10.f,-5.0f),
+            glm::vec3(60.0f,0.0f,0.0f)
+    };
+
 
     // render loop
     // -----------
@@ -405,14 +430,16 @@ int main() {
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        setShader(ourShader, dirLight, pointLight, spotLight);
-        setShader(lightShader, dirLight, pointLight, spotLight);
+        setShader(ourShader, dirLight, pointLight, spotLight, lightPos);
+        setShader(lightShader, dirLight, pointLight, spotLight, lightPos);
 
         cubeShader.use();
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, -5.0f, 0.0f));
         glm::mat4 view = programState->camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(5.0f));
+
         cubeShader.setMat4("model", model);
         cubeShader.setMat4("view", view);
         cubeShader.setMat4("projection", projection);
@@ -440,30 +467,30 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(20.0f));
-        model = glm::translate(model, glm::vec3(2.0f, 25.0f, 2.0f));
-        cubeShader.setMat4("model", model);
-
         // render models
         // ------------------------------------------
 
-        glm::mat4 modelBall = glm::mat4(1.0f);
-        modelBall = glm::translate(modelBall, glm::vec3(2.0f, -15.0f, 0.0f));
-        modelBall = glm::scale(modelBall, glm::vec3(2.0f));
-        ourShader.setMat4("model", modelBall);
-        ballModel.Draw(ourShader);
+        for(unsigned int i = 0; i < grassPos.size(); i++) {
+            glm::mat4 modelGrass = glm::mat4(1.0f);
+            modelGrass = glm::translate(modelGrass, grassPos[i]);
+            modelGrass = glm::scale(modelGrass, glm::vec3(0.008f));
+            ourShader.setMat4("model", modelGrass);
+            grassModel.Draw(ourShader);
+        }
 
-        glm::mat4 modelRose = glm::mat4(1.0f);
-        modelRose = glm::translate(modelRose, glm::vec3(2.0f, -15.0f, 0.0f));
-        modelRose = glm::scale(modelRose, glm::vec3(0.05f));
-        ourShader.setMat4("model", modelRose);
-        roseModel.Draw(ourShader);
+
+        for(unsigned int i = 0; i < rosePos.size(); i++) {
+            glm::mat4 modelRose = glm::mat4(1.0f);
+            modelRose = glm::translate(modelRose, rosePos[i]);
+            modelRose = glm::scale(modelRose, glm::vec3(0.008f));
+            ourShader.setMat4("model", modelRose);
+            roseModel.Draw(ourShader);
+        }
 
         glm::vec3 pointLightPosition = glm::vec3(0.0f, 20.0f, 0.0f);
 
         ourShader.use();
-        ourShader.setVec3("moon.position", pointLightPosition);
+        ourShader.setVec3("light.position", pointLightPosition);
 
         // draw skybox
         //___________________________________________________________________________________________
@@ -686,7 +713,7 @@ unsigned int loadTexture(char const * path)
     return textureID;
 }
 
-void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight){
+void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight, vector<glm::vec3> lightPos) {
     ourShader.use();
 
     ourShader.setVec3("dirLight.direction", dirLight.direction);
@@ -696,26 +723,23 @@ void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotL
 
     ourShader.setInt("pointLightOn", pointLightOn);
 
-    /*
-    ourShader.setVec3("pointLight" + std::to_string(i) + ".position", lightPos[i-1]);
-    ourShader.setVec3("pointLight" + std::to_string(i) + ".ambient", pointLight.ambient);
-    ourShader.setVec3("pointLight" + std::to_string(i) + ".diffuse", pointLight.diffuse);
-    ourShader.setVec3("pointLight" + std::to_string(i) + ".specular", pointLight.specular);
-    ourShader.setFloat("pointLight" + std::to_string(i) + ".constant", pointLight.constant);
-    ourShader.setFloat("pointLight" + std::to_string(i) + ".linear", pointLight.linear);
-    ourShader.setFloat("pointLight" + std::to_string(i) + ".quadratic", pointLight.quadratic);
-     */
+    for(unsigned int i=1; i<=8; ++i){
+        ourShader.setVec3("pointLight" + std::to_string(i) + ".position", lightPos[i-1]);
+        ourShader.setVec3("pointLight" + std::to_string(i) + ".ambient", pointLight.ambient);
+        ourShader.setVec3("pointLight" + std::to_string(i) + ".diffuse", pointLight.diffuse);
+        ourShader.setVec3("pointLight" + std::to_string(i) + ".specular", pointLight.specular);
+        ourShader.setFloat("pointLight" + std::to_string(i) + ".constant", pointLight.constant);
+        ourShader.setFloat("pointLight" + std::to_string(i) + ".linear", pointLight.linear);
+        ourShader.setFloat("pointLight" + std::to_string(i) + ".quadratic", pointLight.quadratic);
+    }
 
-    ourShader.setVec3("moon.ambient", glm::vec3(2.0, 1.5, 0.1));
-    ourShader.setVec3("moon.diffuse", pointLight.diffuse);
-    ourShader.setVec3("moon.specular", glm::vec3(0.7, 0.6, 0.5));
-    ourShader.setFloat("moon.constant", pointLight.constant);
-    ourShader.setFloat("moon.linear", pointLight.linear);
-    ourShader.setFloat("moon.quadratic", pointLight.quadratic);
+    ourShader.setVec3("light.ambient", glm::vec3(2.0, 1.5, 0.1));
+    ourShader.setVec3("light.diffuse", pointLight.diffuse);
+    ourShader.setVec3("light.specular", glm::vec3(0.7, 0.6, 0.5));
+    ourShader.setFloat("light.constant", pointLight.constant);
+    ourShader.setFloat("light.linear", pointLight.linear);
+    ourShader.setFloat("light.quadratic", pointLight.quadratic);
 
-
-       // ourShader.setVec3("viewPosition", programState->camera.Position)
-       // ourShader.setFloat("material.shininess", 32.0f);
     ourShader.setInt("lightOn", lightOn);
     ourShader.setVec3("spotLight.position", programState->camera.Position);
     ourShader.setVec3("spotLight.direction", programState->camera.Front);
@@ -728,15 +752,6 @@ void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotL
     ourShader.setFloat("spotLight.cutOff", spotLight.cutOff);
     ourShader.setFloat("spotLight.outerCutOff", spotLight.outerCutOff);
 
-        // view/projection transformations
-        /*
-        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = programState->camera.GetViewMatrix();
-
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
-         */
 }
 
 

@@ -50,9 +50,14 @@ in vec3 FragPos;
 
 uniform DirLight dirLight;
 
-uniform PointLight pointLight;
-
-uniform PointLight moon;
+uniform PointLight pointLight1;
+uniform PointLight pointLight2;
+uniform PointLight pointLight3;
+uniform PointLight pointLight4;
+uniform PointLight pointLight5;
+uniform PointLight pointLight6;
+uniform PointLight pointLight7;
+uniform PointLight pointLight8;
 
 uniform Material material;
 
@@ -131,10 +136,17 @@ void main()
 
     vec3 result = CalcDirLight(dirLight, normal, viewDir);
 
-    result += CalcPointLight(moon, normal, FragPos, viewDir);
-
     if(pointLightOn){
-        result += CalcPointLight(pointLight, normal, FragPos, viewDir);
+        if(pointLightOn){
+                    result += CalcPointLight(pointLight1, normal, FragPos, viewDir);
+                    result += CalcPointLight(pointLight2, normal, FragPos, viewDir);
+                    result += CalcPointLight(pointLight3, normal, FragPos, viewDir);
+                    result += CalcPointLight(pointLight4, normal, FragPos, viewDir);
+                    result += CalcPointLight(pointLight5, normal, FragPos, viewDir);
+                    result += CalcPointLight(pointLight6, normal, FragPos, viewDir);
+                    result += CalcPointLight(pointLight7, normal, FragPos, viewDir);
+                    result += CalcPointLight(pointLight8, normal, FragPos, viewDir);
+            }
     }
 
     if(lightOn)
