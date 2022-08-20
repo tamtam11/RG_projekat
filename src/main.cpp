@@ -16,6 +16,8 @@
 
 #include <iostream>
 
+#define TIMER_START 120.0
+
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
@@ -69,11 +71,9 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 bool lightOn = false;
-bool pointLightOn = true;
+bool pointLightOn = false;
 bool kKeyPressed = false;
 bool lKeyPressed = false;
-
-
 
 // camera
 
@@ -85,12 +85,24 @@ bool firstMouse = true;
 float deltaTime = 1.0f;
 float lastFrame = 0.0f;
 
+struct RoseMoving{
+    bool rose1 = false;
+    bool rose2 = false;
+    bool rose3 = false;
+};
+
 struct ProgramState {
 
     glm::vec3 clearColor = glm::vec3(0.8f,0.8f,1.0f);
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
+
+    bool gameStart = false;
+    double startTime;
+    bool rose1Collected = false;
+    bool rose2Collected = false;
+    bool rose3Collected = false;
 
     DirLight dirLight;
     PointLight pointLight;
@@ -138,6 +150,7 @@ void ProgramState::LoadFromFile(std::string filename) {
 }
 
 ProgramState *programState;
+RoseMoving roseMoving;
 
 void DrawImGui(ProgramState *programState);
 
@@ -195,8 +208,8 @@ int main() {
 
     //light
     DirLight& dirLight = programState->dirLight;
-    dirLight.direction = glm::vec3(-40.0f, -20.0f, 70.0f);
-    dirLight.ambient = glm::vec3(0.04);
+    dirLight.direction = glm::vec3(40.0f, -20.0f, 70.0f);
+    dirLight.ambient = glm::vec3(0.2);
     dirLight.diffuse = glm::vec3(0.3, 0.1, 0.0);
     dirLight.specular = glm::vec3(0.4, 0.3, 0.2);
 
@@ -241,6 +254,77 @@ int main() {
     Model roseModel("resources/objects/rose/Models and Textures/rose.obj");
     roseModel.SetShaderTextureNamePrefix("material.");
 
+    /* REAL ONES
+    float vertices[] = {
+            // positions          // colors           // texture coords
+            0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+            0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+            -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+            -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
+    };
+    */
+
+    float vertices[] = {
+            // positions          // colors           // texture coords
+            0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // top right
+            0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f, // bottom right
+            -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // bottom left
+            -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   1.0f, 0.0f  // top left
+    };
+
+
+    unsigned int indices[] = {
+            0, 1, 3, // first triangle
+            1, 2, 3  // second triangle
+    };
+    unsigned int VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // texture coord attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+
+    // TODO: SMISLITI NESTO MALO PAMETNIJE, OVO DELUJE ROGOBATNO
+    // POTREBNO JE DA BUDU NIZ DA BISMO RENDEROVALI U PETLJI, A NE SVAKU POSEBNU
+    unsigned int SRBflagTexture = loadTexture(FileSystem::getPath("resources/textures/srb.png").c_str());
+    unsigned int RUSflagTexture = loadTexture(FileSystem::getPath("resources/textures/rus.png").c_str());
+    unsigned int SPAflagTexture = loadTexture(FileSystem::getPath("resources/textures/spa.png").c_str());
+    unsigned int SADflagTexture = loadTexture(FileSystem::getPath("resources/textures/usa.png").c_str());
+    unsigned int BRAflagTexture = loadTexture(FileSystem::getPath("resources/textures/bra.png").c_str());
+    unsigned int ARGflagTexture = loadTexture(FileSystem::getPath("resources/textures/arg.png").c_str());
+    unsigned int CANflagTexture = loadTexture(FileSystem::getPath("resources/textures/can.png").c_str());
+    unsigned int MEXflagTexture = loadTexture(FileSystem::getPath("resources/textures/mex.png").c_str());
+
+    unsigned int textures[8];
+    textures[0] = SRBflagTexture;
+    textures[1] = RUSflagTexture;
+    textures[2] = SPAflagTexture;
+    textures[3] = SADflagTexture;
+    textures[4] = BRAflagTexture;
+    textures[5] = ARGflagTexture;
+    textures[6] = CANflagTexture;
+    textures[7] = MEXflagTexture;
+
+
+
+    /*
     // cube vertices
     // -------------------------------------------------
     float cubeVertices[] = {
@@ -287,6 +371,7 @@ int main() {
             -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
+    */
 
     //Seting skybox vertices
     //____________________________________________________________________________________________
@@ -334,7 +419,7 @@ int main() {
             -1.0f, -1.0f,  1.0f,
             1.0f, -1.0f,  1.0f
     };
-
+    /*
     // cube VAO
     // -----------------------------------------------------
     unsigned int cubeVAO, cubeVBO;
@@ -347,6 +432,7 @@ int main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    */
 
     // skybox VAO
     //_______________________________________________________________________________________________
@@ -359,8 +445,7 @@ int main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-    unsigned int cubeTexture = loadTexture(FileSystem::getPath("resources/textures/pngtree-serbia-flag-transparent-watercolor-painted-brush-png-image_2156611.jpg").c_str());
-
+    //unsigned int cubeTexture = loadTexture(FileSystem::getPath("resources/textures/box.png").c_str());
 
     // load textures for skybox
     // ______________________________________________________________________________________________
@@ -382,22 +467,20 @@ int main() {
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
 
-    vector<glm::vec3> grassPos {
-            glm::vec3(50.0f,0.0f,-10.0f),
-            glm::vec3(40.0f,-5.0f,-15.0f),
-            glm::vec3(35.0f,5.0f,-10.0f),
-            glm::vec3(60.0f,10.0f,-20.0f),
-            glm::vec3(55.0f,-10.0f,-15.f),
-            glm::vec3(65.0f,-10.0f,-5.0f),
-            glm::vec3(45.0f,-10.f,-20.0f),
-            glm::vec3(65.0f,0.0f,-15.0f)
-    };
+    ourShader.use();
+    ourShader.setInt("texture1", 0);
 
     // na samo tri mesta postaviti ruze
     vector<glm::vec3> rosePos {
             glm::vec3(40.0f,-5.0f,-16.0f),
-            glm::vec3(65.0f,-10.0f,-6.0f),
+            glm::vec3(65.0f,-10.0f,-5.2f),
             glm::vec3(65.0f,0.0f,-16.0f)
+    };
+
+    vector<glm::vec3> roseMovingPos {
+            glm::vec3(40.0f,-5.0f,-12.0f),
+            glm::vec3(65.0f,-10.0f,-4.2f),
+            glm::vec3(65.0f,0.0f,-13.0f)
     };
 
     vector<glm::vec3> lightPos {
@@ -410,6 +493,30 @@ int main() {
             glm::vec3(40.0f,-10.f,-5.0f),
             glm::vec3(60.0f,0.0f,0.0f)
     };
+
+    vector<glm::vec3> flagPos {
+            glm::vec3(40.5f, -4.8f, -14.0f), // SRB
+            glm::vec3(64.0f, -9.5f, -4.5f), // RUS
+            glm::vec3(64.7f, 0.1f, -14.5f), // SPA
+            glm::vec3(59.6f,9.5f,-19.0f), // USA
+            glm::vec3(35.5f,4.8f,-9.5f), // BRA
+            glm::vec3(50.0f,-0.1f,-9.0f), // ARG
+            glm::vec3(54.7f,-7.7f,-14.f), // CAN
+            glm::vec3(45.2f,-9.65f,-19.0f) // MEX
+    };
+
+
+    vector<glm::vec3> grassPos {
+            glm::vec3(50.0f,0.0f,-10.0f), // USA
+            glm::vec3(40.0f,-5.0f,-15.0f), // SRB
+            glm::vec3(35.0f,5.0f,-10.0f), // BRA
+            glm::vec3(60.0f,10.0f,-20.0f), // USA
+            glm::vec3(55.0f,-8.0f,-15.f), // CAN
+            glm::vec3(65.0f,-10.0f,-5.0f), // RUS
+            glm::vec3(45.0f,-10.f,-20.0f), // MEX
+            glm::vec3(65.0f,0.0f,-15.0f) // SPA
+    };
+
 
 
     // render loop
@@ -433,10 +540,35 @@ int main() {
         setShader(ourShader, dirLight, pointLight, spotLight, lightPos);
         setShader(lightShader, dirLight, pointLight, spotLight, lightPos);
 
-        cubeShader.use();
+
+        // render container
         glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+
+        // FLAGS
+        for(int i=0; i<flagPos.size(); i++) {
+            glBindTexture(GL_TEXTURE_2D, textures[i]);
+
+            ourShader.use();
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, flagPos[i]);
+            model = glm::scale(model, glm::vec3(1.0f));
+
+            ourShader.setMat4("model", model);
+            ourShader.setMat4("view", view);
+            ourShader.setMat4("projection", projection);
+            glBindVertexArray(VAO);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        }
+
+        /*
+        cubeShader.use();
+      //  glm::mat4 model = glm::mat4(1.0f);
+       // glm::mat4 view = programState->camera.GetViewMatrix();
+       // glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
         model = glm::scale(model, glm::vec3(5.0f));
 
@@ -449,6 +581,7 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, cubeTexture);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
+         */
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
@@ -470,6 +603,8 @@ int main() {
         // render models
         // ------------------------------------------
 
+
+        // GRASS
         for(unsigned int i = 0; i < grassPos.size(); i++) {
             glm::mat4 modelGrass = glm::mat4(1.0f);
             modelGrass = glm::translate(modelGrass, grassPos[i]);
@@ -478,22 +613,97 @@ int main() {
             grassModel.Draw(ourShader);
         }
 
+        // ROSES
 
-        for(unsigned int i = 0; i < rosePos.size(); i++) {
-            glm::mat4 modelRose = glm::mat4(1.0f);
-            modelRose = glm::translate(modelRose, rosePos[i]);
-            modelRose = glm::scale(modelRose, glm::vec3(0.008f));
-            ourShader.setMat4("model", modelRose);
-            roseModel.Draw(ourShader);
+        // ROSE1
+        glm::mat4 modelRose1 = glm::mat4(1.0f);
+        if(roseMoving.rose1) {
+            modelRose1 = glm::translate(modelRose1, roseMovingPos[0]);
         }
+        else {
+            modelRose1 = glm::translate(modelRose1,rosePos[0]);
+        }
+
+        if(programState->rose1Collected) {
+            modelRose1 = glm::scale(modelRose1, glm::vec3(0.02f));
+        }
+        else {
+            modelRose1 = glm::scale(modelRose1, glm::vec3(0.01f));
+        }
+        ourShader.setMat4("model", modelRose1);
+        roseModel.Draw(ourShader);
+
+        // ROSE2
+        glm::mat4 modelRose2 = glm::mat4(1.0f);
+        if(roseMoving.rose2) {
+            modelRose2 = glm::translate(modelRose2, roseMovingPos[1]);
+        }
+        else {
+            modelRose2 = glm::translate(modelRose2,rosePos[1]);
+        }
+
+        if(programState->rose2Collected) {
+            modelRose2 = glm::scale(modelRose2, glm::vec3(0.02f));
+        }
+        else {
+            modelRose2 = glm::scale(modelRose2, glm::vec3(0.01f));
+        }
+        ourShader.setMat4("model", modelRose2);
+        roseModel.Draw(ourShader);
+
+        // ROSE3
+        glm::mat4 modelRose3 = glm::mat4(1.0f);
+        if(roseMoving.rose3) {
+            modelRose3 = glm::translate(modelRose3, roseMovingPos[2]);
+        }
+        else {
+            modelRose3 = glm::translate(modelRose3,rosePos[2]);
+        }
+
+        if(programState->rose3Collected) {
+            modelRose3 = glm::scale(modelRose3, glm::vec3(0.03f));
+        }
+        else {
+            modelRose3 = glm::scale(modelRose3, glm::vec3(0.01f));
+        }
+
+        ourShader.setMat4("model", modelRose3);
+        roseModel.Draw(ourShader);
 
         glm::vec3 pointLightPosition = glm::vec3(0.0f, 20.0f, 0.0f);
 
         ourShader.use();
         ourShader.setVec3("light.position", pointLightPosition);
 
+        /*
+        if(programState->rose1Collected) {
+           // modelRose1 = glm::mat4(1.0f);
+           // modelRose1 = glm::translate(modelRose1, roseMovingPos[0]);
+            modelRose1 = glm::scale(modelRose1, glm::vec3(0.04f));
+           // ourShader.setMat4("model", modelRose1);
+          //  roseModel.Draw(ourShader);
+        }
+
+        if(programState->rose2Collected) {
+         //   modelRose2 = glm::mat4(1.0f);
+            // modelRose1 = glm::translate(modelRose1, roseMovingPos[0]);
+            modelRose2 = glm::scale(modelRose2, glm::vec3(0.04f));
+           // ourShader.setMat4("model", modelRose2);
+           // roseModel.Draw(ourShader);
+        }
+
+        if(programState->rose3Collected) {
+          //  modelRose3 = glm::mat4(1.0f);
+            // modelRose1 = glm::translate(modelRose1, roseMovingPos[0]);
+            modelRose3 = glm::scale(modelRose3, glm::vec3(0.04f));
+          //  ourShader.setMat4("model", modelRose3);
+           // roseModel.Draw(ourShader);
+        }
+         */
+
         // draw skybox
         //___________________________________________________________________________________________
+        glDepthMask(GL_FALSE);
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
         view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix()));
@@ -506,7 +716,8 @@ int main() {
         glBindTexture(GL_TEXTURE_CUBE_MAP, programState->cubemapTexture);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
-        glDepthFunc(GL_LESS); // set depth function back to default
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LESS);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -521,8 +732,8 @@ int main() {
     glDeleteVertexArrays(1, &skyboxVAO);
     glDeleteBuffers(1, &skyboxVBO);
 
-    glDeleteVertexArrays(1, &cubeVAO);
-    glDeleteBuffers(1, &cubeVBO);
+   // glDeleteVertexArrays(1, &cubeVAO);
+    //glDeleteBuffers(1, &cubeVBO);
 
     programState->SaveToFile("resources/program_state.txt");
     delete programState;
@@ -541,6 +752,7 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    /*
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -549,7 +761,9 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+    */
 
+    // spotlight
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !lKeyPressed){
         lightOn = !lightOn;
         lKeyPressed = true;
@@ -558,15 +772,18 @@ void processInput(GLFWwindow *window) {
     {
         lKeyPressed = false;
     }
+
     //point light
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS && !kKeyPressed){
         pointLightOn = !pointLightOn;
         kKeyPressed = true;
     }
+
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_RELEASE)
     {
         kKeyPressed = false;
     }
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -603,30 +820,41 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
 }
 
 void DrawImGui(ProgramState *programState) {
+
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
 
     {
-        static float f = 0.0f;
-        ImGui::Begin("Podesavanja ");
-        ImGui::Text("Ovo su podesavanja osobina svetla");
+        double time = TIMER_START;
+        if(programState->gameStart && !(programState->rose1Collected && programState->rose2Collected && programState->rose3Collected)) {
+            time = max(TIMER_START - glfwGetTime() + programState->startTime, 0.0);
+        }
+        ImGui::Begin("European roses");
+        ImGui::Text("Timer: %s sec", time);
 
-        ImGui::DragFloat("constant", &programState->pointLight.constant, 0.005, 0.0001, 1.0);
-        ImGui::DragFloat("linear", &programState->pointLight.linear, 0.005, 0.0001, 1.0);
-        ImGui::DragFloat("quadratic", &programState->pointLight.quadratic, 0.005, 0.0001, 1.0);
+        if(!programState->gameStart) {
+            ImGui::Text("---------------OBJASNJENJE IGRICE-----------\n\n");
+        }
+        else if(time == 0) {
+            programState->CameraMouseMovementUpdateEnabled = false;
+            ImGui::Text("----------KRAJ IGRE----------\n\n");
+        }
+        else {
+            ImGui::Text("-----OPET OBJASNJENJE------\n\n");
 
-        ImGui::End();
-    }
+            if(programState->rose1Collected && !(programState->rose2Collected && programState->rose3Collected)) {
+                ImGui::Text("-------RUZA 1-----\n\n");
+            }
+            if(programState->rose2Collected && !(programState->rose1Collected && programState->rose3Collected)) {
+                ImGui::Text("-------RUZA 2-----\n\n");
+            }
+            if(programState->rose3Collected && !(programState->rose1Collected && programState->rose2Collected)) {
+                ImGui::Text("-------RUZA 2-----\n\n");
+            }
+        }
 
-    {
-        ImGui::Begin("Camera info");
-        const Camera& c = programState->camera;
-        ImGui::Text("Camera position: (%f, %f, %f)", c.Position.x, c.Position.y, c.Position.z);
-        ImGui::Text("(Yaw, Pitch): (%f, %f)", c.Yaw, c.Pitch);
-        ImGui::Text("Camera front: (%f, %f, %f)", c.Front.x, c.Front.y, c.Front.z);
-        ImGui::Checkbox("Camera mouse update", &programState->CameraMouseMovementUpdateEnabled);
         ImGui::End();
     }
 
@@ -635,13 +863,59 @@ void DrawImGui(ProgramState *programState) {
 }
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
-        programState->ImGuiEnabled = !programState->ImGuiEnabled;
-        if (programState->ImGuiEnabled) {
-            programState->CameraMouseMovementUpdateEnabled = false;
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        } else {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    if (key == GLFW_KEY_ENTER && action == GLFW_PRESS) {
+        if(!programState->gameStart) {
+            programState->startTime = glfwGetTime();
+        }
+        programState->gameStart = true;
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    }
+
+    double xpos = programState->camera.Front.x;
+    double ypos = programState->camera.Front.y;
+    double zpos = programState->camera.Front.z;
+    double zoom = programState->camera.Zoom;
+
+    if(key == GLFW_KEY_SPACE && action == GLFW_PRESS && programState->gameStart) {
+        if ((xpos + 0.5) + (ypos + 0.2) + (zpos + 0.9) < 0.1 && zoom <= 12 && zoom >= 8 && !roseMoving.rose1) {
+           // std::cout
+            roseMoving.rose1 = true;
+        } else if (roseMoving.rose1) {
+            roseMoving.rose1 = false;
+        }
+        // rose 2
+        else if ((xpos - 0.8) + (ypos + 0.5) + (zpos + 0.36) < 0.1 && zoom <= 10 && zoom >= 5 && !roseMoving.rose2) {
+            roseMoving.rose2 = true;
+        } else if (roseMoving.rose2) {
+            roseMoving.rose2 = false;
+        }
+        // rose 3
+        if ((xpos - 0.66) + (ypos - 0.07) + (zpos + 0.75) < 0.1 && zoom <= 7 && zoom >= 3 && !roseMoving.rose3) {
+            roseMoving.rose3 = true;
+        } else if (roseMoving.rose3) {
+            roseMoving.rose3 = false;
+        }
+    }
+
+
+    if(key == GLFW_KEY_R && action == GLFW_PRESS){
+        if(roseMoving.rose1){
+            programState->rose1Collected = true;
+            lightOn = false;
+        }
+        if(roseMoving.rose2){
+            programState->rose2Collected = true;
+            lightOn = false;
+        }
+        if(roseMoving.rose3){
+            programState->rose3Collected = true;
+            lightOn = false;
+        }
+
+        if(programState->rose1Collected && programState->rose2Collected && programState->rose3Collected){
+            pointLightOn = true;
+            //lightOn = false;
         }
     }
 }
