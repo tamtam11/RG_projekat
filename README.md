@@ -21,6 +21,6 @@ https://www.youtube.com/watch?v=cloD7Gr16MA
 
  ![img](images/pocetak.png)
  ![img](images/sakrivena_ruza.png)
- ![img](images/nadjenja_ruza.png)
+ ![img](images/nadjena_ruza.png)
  ![img](images/kraj.png)
 
