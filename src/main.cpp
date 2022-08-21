@@ -72,13 +72,6 @@ const unsigned int SCR_HEIGHT = 600;
 
 bool spotLightOn = false;
 bool pointLightOn = true;
-bool kKeyPressed = false;
-bool lKeyPressed = false;
-float exposure = 0.1f;
-bool hdr = true;
-bool hdrKeyPressed = false;
-bool bloom = true;
-bool bloomKeyPressed = false;
 
 // camera
 
@@ -102,6 +95,8 @@ struct ProgramState {
     bool rose1Collected = false;
     bool rose2Collected = false;
     bool rose3Collected = false;
+
+    int numOfMistakes = 0;
 
     DirLight dirLight;
     PointLight pointLight;
@@ -212,7 +207,6 @@ int main() {
     dirLight.specular = glm::vec3(0.4, 0.3, 0.2);
 
     PointLight& pointLight = programState->pointLight;
-   // pointLight.position = glm::vec3(5.0f, 5.0, 5.0);
     pointLight.ambient = glm::vec3(0.5, 0.5, 0.5);
     pointLight.diffuse = glm::vec3(0.9, 0.9, 0.9);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
@@ -261,52 +255,6 @@ int main() {
             0, 1, 3, // first triangle
             1, 2, 3  // second triangle
     };
-    unsigned int VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-
-    // TODO: SMISLITI NESTO MALO PAMETNIJE, OVO DELUJE ROGOBATNO
-    // POTREBNO JE DA BUDU NIZ DA BISMO RENDEROVALI U PETLJI, A NE SVAKU POSEBNU
-    unsigned int SRBflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/srb.png").c_str());
-    unsigned int RUSflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/rus.png").c_str());
-    unsigned int SPAflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/spa.png").c_str());
-    unsigned int SADflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/usa.png").c_str());
-    unsigned int BRAflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/bra.png").c_str());
-    unsigned int ARGflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/arg.png").c_str());
-    unsigned int CANflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/can.png").c_str());
-    unsigned int MEXflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/mex.png").c_str());
-
-    unsigned int textures[8];
-    textures[0] = SRBflagTexture;
-    textures[1] = RUSflagTexture;
-    textures[2] = SPAflagTexture;
-    textures[3] = SADflagTexture;
-    textures[4] = BRAflagTexture;
-    textures[5] = ARGflagTexture;
-    textures[6] = CANflagTexture;
-    textures[7] = MEXflagTexture;
-
-    unsigned int cubeTexture = loadTexture(FileSystem::getPath("resources/textures/box.png").c_str());
 
     // cube vertices
     // -------------------------------------------------
@@ -355,7 +303,7 @@ int main() {
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
-    //Seting skybox vertices
+    // Skybox vertices
     //____________________________________________________________________________________________
     float skyboxVertices[] = {
             // positions
@@ -402,8 +350,25 @@ int main() {
             1.0f, -1.0f,  1.0f
     };
 
+    // flags VAO
+    unsigned int VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
     // cube VAO
-    // -----------------------------------------------------
     unsigned int cubeVAO, cubeVBO;
     glGenVertexArrays(1, &cubeVAO);
     glGenBuffers(1, &cubeVBO);
@@ -417,7 +382,6 @@ int main() {
 
 
     // skybox VAO
-    //_______________________________________________________________________________________________
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
@@ -427,8 +391,30 @@ int main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-    // load textures for skybox
-    // ______________________________________________________________________________________________
+
+    // flags textures
+    unsigned int SRBflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/srb.png").c_str());
+    unsigned int RUSflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/rus.png").c_str());
+    unsigned int SPAflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/spa.png").c_str());
+    unsigned int SADflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/usa.png").c_str());
+    unsigned int BRAflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/bra.png").c_str());
+    unsigned int ARGflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/arg.png").c_str());
+    unsigned int CANflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/can.png").c_str());
+    unsigned int MEXflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/mex.png").c_str());
+
+    unsigned int textures[8];
+    textures[0] = SRBflagTexture;
+    textures[1] = RUSflagTexture;
+    textures[2] = SPAflagTexture;
+    textures[3] = SADflagTexture;
+    textures[4] = BRAflagTexture;
+    textures[5] = ARGflagTexture;
+    textures[6] = CANflagTexture;
+    textures[7] = MEXflagTexture;
+
+    unsigned int cubeTexture = loadTexture(FileSystem::getPath("resources/textures/box.png").c_str());
+
+    // skybox textures
     programState->faces =
             {
                     FileSystem::getPath("resources/textures/skybox/right1.png"),
@@ -513,7 +499,7 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // render container - FLAGS
+        // render - FLAGS
         glm::mat4 model = glm::mat4(1.0f);
 
         for(int i=0; i<flagPos.size(); i++) {
@@ -532,6 +518,7 @@ int main() {
         }
 
 
+        // render - CUBES
         for(int i=0; i<cubePos.size(); i++) {
             cubeShader.use();
             model = glm::mat4(1.0f);
@@ -550,14 +537,14 @@ int main() {
         }
 
 
-        // render models
-        // ------------------------------------------
-        // ROSES
+        // render - ROSES
+        // 1
         ourShader.use();
         glm::mat4 modelRose1 = glm::mat4(1.0f);
         modelRose1 = glm::translate(modelRose1,rosePos[0]);
         if(programState->rose1Collected) {
             modelRose1 = glm::scale(modelRose1, glm::vec3(0.05f));
+            modelRose1 = glm::rotate(modelRose1, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
         }
         else {
             modelRose1 = glm::scale(modelRose1, glm::vec3(0.015f));
@@ -565,11 +552,12 @@ int main() {
         ourShader.setMat4("model", modelRose1);
         roseModel.Draw(ourShader);
 
-
+        // 2
         glm::mat4 modelRose2 = glm::mat4(1.0f);
         modelRose2 = glm::translate(modelRose2,rosePos[1]);
         if(programState->rose2Collected) {
             modelRose2 = glm::scale(modelRose2, glm::vec3(0.05f));
+            modelRose2 = glm::rotate(modelRose2, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
         }
         else {
             modelRose2 = glm::scale(modelRose2, glm::vec3(0.015f));
@@ -577,10 +565,12 @@ int main() {
         ourShader.setMat4("model", modelRose2);
         roseModel.Draw(ourShader);
 
+        // 3
         glm::mat4 modelRose3 = glm::mat4(1.0f);
         modelRose3 = glm::translate(modelRose3,rosePos[2]);
         if(programState->rose3Collected) {
             modelRose3 = glm::scale(modelRose3, glm::vec3(0.05f));
+            modelRose3 = glm::rotate(modelRose3, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
         }
         else {
             modelRose3 = glm::scale(modelRose3, glm::vec3(0.015f));
@@ -589,15 +579,12 @@ int main() {
         roseModel.Draw(ourShader);
 
         // draw skybox
-        //___________________________________________________________________________________________
         glDepthMask(GL_FALSE);
         glDepthFunc(GL_LEQUAL);
         skyboxShader.use();
         view = glm::mat4(glm::mat3(programState->camera.GetViewMatrix()));
         skyboxShader.setMat4("view", view);
         skyboxShader.setMat4("projection", projection);
-
-        // skybox cube
         glBindVertexArray(skyboxVAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, programState->cubemapTexture);
@@ -612,13 +599,16 @@ int main() {
         double zpos = programState->camera.Front.z;
         double zoom = programState->camera.Zoom;
 
-        if ((xpos + 0.13) + (ypos + 0.065) + (zpos + 0.99) < 0.1 && zoom <= 7 && zoom >= 3 && programState->gameStart) {
+        if ((xpos + 0.128)*(xpos + 0.128) + (ypos + 0.064)*(ypos + 0.064) + (zpos + 0.989)*(zpos + 0.989) < 0.002
+            && zoom <= 7 && zoom >= 3 && programState->gameStart) {
             spotLightOn = true;
         }
-        else if ((xpos - 0.21) + (ypos - 0.1) + (zpos + 0.98) < 0.1 && zoom <= 8 && zoom >= 3 && programState->gameStart) {
+        else if ((xpos - 0.208)*(xpos - 0.208) + (ypos - 0.099)*(ypos - 0.099) + (zpos + 0.972)*(zpos + 0.972) < 0.002
+                 && zoom <= 8 && zoom >= 3 && programState->gameStart) {
             spotLightOn = true;
         }
-        else if ((xpos - 0.67) + (ypos + 0.23) + (zpos + 0.72) < 0.1 && zoom <= 7 && zoom >= 3 && programState->gameStart) {
+        else if ((xpos - 0.66)*(xpos - 0.66) + (ypos + 0.226)*(ypos + 0.226) + (zpos + 0.715)*(zpos + 0.715) < 0.002
+                 && zoom <= 7 && zoom >= 3 && programState->gameStart) {
             spotLightOn = true;
         }
         else {
@@ -668,56 +658,6 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
 
      */
-
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !lKeyPressed){
-        spotLightOn = !spotLightOn;
-        lKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE)
-    {
-        lKeyPressed = false;
-    }
-    //point light
-    if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS && !kKeyPressed){
-        pointLightOn = !pointLightOn;
-        kKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_K) == GLFW_RELEASE)
-    {
-        kKeyPressed = false;
-    }
-    //hdr
-    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS && !hdrKeyPressed)
-    {
-        hdr = !hdr;
-        hdrKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_RELEASE)
-    {
-        hdrKeyPressed = false;
-    }
-    //exposure
-    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
-    {
-        if (exposure > 0.0f)
-            exposure -= 0.01f;
-        else
-            exposure = 0.0f;
-    }
-    else if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-    {
-        exposure += 0.01f;
-    }
-    //bloom
-    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !bloomKeyPressed)
-    {
-        bloom = !bloom;
-        bloomKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
-    {
-        bloomKeyPressed = false;
-    }
 
 }
 
@@ -814,6 +754,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             programState->startTime = glfwGetTime();
         }
         programState->gameStart = true;
+        pointLightOn = false;
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     }
@@ -825,24 +766,16 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         double zpos = programState->camera.Front.z;
         double zoom = programState->camera.Zoom;
 
-        /*
-        std::cout << "X: ";
-        std::cout << xpos << std::endl;
-        std::cout << "Y: ";
-        std::cout << ypos <<  std::endl;
-        std::cout << "Z: ";
-        std::cout << zpos << std::endl;
-        std::cout << "Zoom:";
-        std::cout << zoom << std::endl;
-        */
-
-        if ((xpos + 0.13) + (ypos + 0.065) + (zpos + 0.99) < 0.1 && zoom <= 7 && zoom >= 3) {
+        if ((xpos + 0.128)*(xpos + 0.128) + (ypos + 0.064)*(ypos + 0.064) + (zpos + 0.989)*(zpos + 0.989) < 0.002
+            && zoom <= 7 && zoom >= 3) {
             programState->rose1Collected = true;
         }
-        else if ((xpos - 0.21) + (ypos - 0.1) + (zpos + 0.98) < 0.1 && zoom <= 8 && zoom >= 3) {
+        else if ((xpos - 0.208)*(xpos - 0.208) + (ypos - 0.099)*(ypos - 0.099) + (zpos + 0.972)*(zpos + 0.972) < 0.002
+                 && zoom <= 8 && zoom >= 3) {
             programState->rose3Collected = true;
         }
-        else if ((xpos - 0.67) + (ypos + 0.23) + (zpos + 0.72) < 0.1 && zoom <= 7 && zoom >= 3) {
+        else if ((xpos - 0.66)*(xpos - 0.66) + (ypos + 0.226)*(ypos + 0.226) + (zpos + 0.715)*(zpos + 0.715) < 0.002
+                 && zoom <= 7 && zoom >= 3) {
             programState->rose2Collected = true;
         }
     }
