@@ -85,13 +85,6 @@ bool firstMouse = true;
 float deltaTime = 1.0f;
 float lastFrame = 0.0f;
 
-/*
-struct RoseMoving{
-    bool rose1 = false;
-    bool rose2 = false;
-    bool rose3 = false;
-};
-*/
 struct ProgramState {
 
     glm::vec3 clearColor = glm::vec3(0.8f,0.8f,1.0f);
@@ -193,7 +186,7 @@ int main() {
     programState = new ProgramState;
     programState->LoadFromFile("resources/program_state.txt");
     if (programState->ImGuiEnabled) {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+       // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
     // Init Imgui
     IMGUI_CHECKVERSION();
@@ -292,14 +285,14 @@ int main() {
 
     // TODO: SMISLITI NESTO MALO PAMETNIJE, OVO DELUJE ROGOBATNO
     // POTREBNO JE DA BUDU NIZ DA BISMO RENDEROVALI U PETLJI, A NE SVAKU POSEBNU
-    unsigned int SRBflagTexture = loadTexture(FileSystem::getPath("resources/textures/srb.png").c_str());
-    unsigned int RUSflagTexture = loadTexture(FileSystem::getPath("resources/textures/rus.png").c_str());
-    unsigned int SPAflagTexture = loadTexture(FileSystem::getPath("resources/textures/spa.png").c_str());
-    unsigned int SADflagTexture = loadTexture(FileSystem::getPath("resources/textures/usa.png").c_str());
-    unsigned int BRAflagTexture = loadTexture(FileSystem::getPath("resources/textures/bra.png").c_str());
-    unsigned int ARGflagTexture = loadTexture(FileSystem::getPath("resources/textures/arg.png").c_str());
-    unsigned int CANflagTexture = loadTexture(FileSystem::getPath("resources/textures/can.png").c_str());
-    unsigned int MEXflagTexture = loadTexture(FileSystem::getPath("resources/textures/mex.png").c_str());
+    unsigned int SRBflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/srb.png").c_str());
+    unsigned int RUSflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/rus.png").c_str());
+    unsigned int SPAflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/spa.png").c_str());
+    unsigned int SADflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/usa.png").c_str());
+    unsigned int BRAflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/bra.png").c_str());
+    unsigned int ARGflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/arg.png").c_str());
+    unsigned int CANflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/can.png").c_str());
+    unsigned int MEXflagTexture = loadTexture(FileSystem::getPath("resources/textures/flags/mex.png").c_str());
 
     unsigned int textures[8];
     textures[0] = SRBflagTexture;
@@ -432,7 +425,6 @@ int main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-    //unsigned int cubeTexture = loadTexture(FileSystem::getPath("resources/textures/box.png").c_str());
 
     // load textures for skybox
     // ______________________________________________________________________________________________
@@ -456,13 +448,6 @@ int main() {
 
     ourShader.use();
     ourShader.setInt("texture1", 0);
-
-
-    vector<glm::vec3> roseMovingPos {
-            glm::vec3(40.0f,-5.0f,-12.0f),
-            glm::vec3(65.0f,-10.0f,-4.2f),
-            glm::vec3(65.0f,0.0f,-13.0f)
-    };
 
     vector<glm::vec3> lightPos {
             glm::vec3(45.0f,5.0f,-5.0f),
@@ -523,8 +508,6 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         setShader(ourShader, dirLight, pointLight, spotLight, lightPos);
-        setShader(lightShader, dirLight, pointLight, spotLight, lightPos);
-
 
         // render container
         glm::mat4 model = glm::mat4(1.0f);
@@ -590,28 +573,8 @@ int main() {
 
         // render models
         // ------------------------------------------
-
-
-        // GRASS
-        /*
-        for(unsigned int i = 0; i < grassPos.size(); i++) {
-            glm::mat4 modelGrass = glm::mat4(1.0f);
-            modelGrass = glm::translate(modelGrass, grassPos[i]);
-            modelGrass = glm::scale(modelGrass, glm::vec3(0.008f));
-            ourShader.setMat4("model", modelGrass);
-            grassModel.Draw(ourShader);
-        }
-         */
-
         // ROSES
-
-        // ROSE1
         glm::mat4 modelRose1 = glm::mat4(1.0f);
-        /*
-        if(roseMoving.rose1) {
-            modelRose1 = glm::translate(modelRose1, roseMovingPos[0]);
-        }*/
-
         modelRose1 = glm::translate(modelRose1,rosePos[0]);
         if(programState->rose1Collected) {
             modelRose1 = glm::scale(modelRose1, glm::vec3(0.05f));
@@ -622,15 +585,9 @@ int main() {
         ourShader.setMat4("model", modelRose1);
         roseModel.Draw(ourShader);
 
-        // ROSE2
-        glm::mat4 modelRose2 = glm::mat4(1.0f);
-        /*
-        if(roseMoving.rose2) {
-            modelRose2 = glm::translate(modelRose2, roseMovingPos[1]);
-        }
-         */
-        modelRose2 = glm::translate(modelRose2,rosePos[1]);
 
+        glm::mat4 modelRose2 = glm::mat4(1.0f);
+        modelRose2 = glm::translate(modelRose2,rosePos[1]);
         if(programState->rose2Collected) {
             modelRose2 = glm::scale(modelRose2, glm::vec3(0.05f));
         }
@@ -640,22 +597,14 @@ int main() {
         ourShader.setMat4("model", modelRose2);
         roseModel.Draw(ourShader);
 
-        // ROSE3
         glm::mat4 modelRose3 = glm::mat4(1.0f);
-        /*
-        if(roseMoving.rose3) {
-            modelRose3 = glm::translate(modelRose3, roseMovingPos[2]);
-        }
-         */
         modelRose3 = glm::translate(modelRose3,rosePos[2]);
-
         if(programState->rose3Collected) {
             modelRose3 = glm::scale(modelRose3, glm::vec3(0.05f));
         }
         else {
             modelRose3 = glm::scale(modelRose3, glm::vec3(0.015f));
         }
-
         ourShader.setMat4("model", modelRose3);
         roseModel.Draw(ourShader);
 
@@ -682,6 +631,35 @@ int main() {
         glBindVertexArray(0);
         glDepthMask(GL_TRUE);
         glDepthFunc(GL_LESS);
+
+
+        double xpos = programState->camera.Front.x;
+        double ypos = programState->camera.Front.y;
+        double zpos = programState->camera.Front.z;
+        double zoom = programState->camera.Zoom;
+
+            /*
+            std::cout << "X: ";
+            std::cout << xpos << std::endl;
+            std::cout << "Y: ";
+            std::cout << ypos <<  std::endl;
+            std::cout << "Z: ";
+            std::cout << zpos << std::endl;
+            std::cout << "Zoom:";
+            std::cout << zoom << std::endl;
+            */
+        if ((xpos + 0.13) + (ypos + 0.065) + (zpos + 0.99) < 0.1 && zoom <= 7 && zoom >= 3 && programState->gameStart) {
+            lightOn = true;
+        }
+        else if ((xpos - 0.21) + (ypos - 0.1) + (zpos + 0.98) < 0.1 && zoom <= 8 && zoom >= 3 && programState->gameStart) {
+            lightOn = true;
+        }
+        else if ((xpos - 0.67) + (ypos + 0.23) + (zpos + 0.72) < 0.1 && zoom <= 7 && zoom >= 3 && programState->gameStart) {
+            lightOn = true;
+        }
+        else {
+            lightOn = false;
+        }
 
         if (programState->ImGuiEnabled) {
             DrawImGui(programState);
