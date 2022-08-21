@@ -1,6 +1,6 @@
 # RAČUNARSKA GRAFIKA
 
-# Projekat iz predmeta Računarska grafika na Matematičkom fakultetu.
+# - Projekat iz predmeta Računarska grafika na Matematičkom fakultetu -
 # Student: Tamara Tomić 122/2017
 1. Na sceni su postavljene kutije sa zastavama. 
 2. U kutijama koje imaju evropsku zastavu kriju se ruže.
