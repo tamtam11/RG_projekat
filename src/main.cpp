@@ -64,16 +64,21 @@ struct SpotLight {
     glm::vec3 specular;
 };
 
-void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight, vector<glm::vec3> lightPos);
+void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-bool lightOn = false;
-bool pointLightOn = false;
+bool spotLightOn = false;
+bool pointLightOn = true;
 bool kKeyPressed = false;
 bool lKeyPressed = false;
+float exposure = 0.1f;
+bool hdr = true;
+bool hdrKeyPressed = false;
+bool bloom = true;
+bool bloomKeyPressed = false;
 
 // camera
 
@@ -144,7 +149,6 @@ void ProgramState::LoadFromFile(std::string filename) {
 }
 
 ProgramState *programState;
-// RoseMoving roseMoving;
 
 void DrawImGui(ProgramState *programState);
 
@@ -207,9 +211,8 @@ int main() {
     dirLight.diffuse = glm::vec3(0.3, 0.1, 0.0);
     dirLight.specular = glm::vec3(0.4, 0.3, 0.2);
 
-    // PLAYING, TRYING
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(5.0f, 5.0, 5.0);
+   // pointLight.position = glm::vec3(5.0f, 5.0, 5.0);
     pointLight.ambient = glm::vec3(0.5, 0.5, 0.5);
     pointLight.diffuse = glm::vec3(0.9, 0.9, 0.9);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
@@ -237,7 +240,6 @@ int main() {
     Shader ourShader("resources/shaders/model_lighting.vs", "resources/shaders/model_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     Shader cubeShader("resources/shaders/cube.vs", "resources/shaders/cube.fs");
-    Shader lightShader("resources/shaders/light.vs", "resources/shaders/light.fs");
 
     // load models
     // -----------
@@ -425,7 +427,6 @@ int main() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-
     // load textures for skybox
     // ______________________________________________________________________________________________
     programState->faces =
@@ -440,14 +441,12 @@ int main() {
 
     programState->cubemapTexture = loadCubemap(programState->faces);
 
+
     cubeShader.use();
     cubeShader.setInt("texture1", 0);
 
     skyboxShader.use();
     skyboxShader.setInt("skybox", 0);
-
-    ourShader.use();
-    ourShader.setInt("texture1", 0);
 
     vector<glm::vec3> lightPos {
             glm::vec3(45.0f,5.0f,-5.0f),
@@ -507,15 +506,15 @@ int main() {
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        setShader(ourShader, dirLight, pointLight, spotLight, lightPos);
+        setShader(ourShader, dirLight, pointLight, spotLight);
 
-        // render container
-        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom), (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        ourShader.setMat4("projection", projection);
+        ourShader.setMat4("view", view);
 
-
-        // FLAGS
+        // render container - FLAGS
+        glm::mat4 model = glm::mat4(1.0f);
 
         for(int i=0; i<flagPos.size(); i++) {
             glBindTexture(GL_TEXTURE_2D, textures[i]);
@@ -536,9 +535,6 @@ int main() {
         for(int i=0; i<cubePos.size(); i++) {
             cubeShader.use();
             model = glm::mat4(1.0f);
-            // glm::mat4 view = programState->camera.GetViewMatrix();
-            // glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-            model = glm::mat4(1.0f);
             model = glm::translate(model, cubePos[i]);
             model = glm::scale(model, glm::vec3(3.0f));
 
@@ -554,26 +550,10 @@ int main() {
         }
 
 
-        // don't forget to enable shader before setting uniforms
-        ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
-
-        ourShader.setVec3("pointLight.position", pointLight.position);
-        ourShader.setVec3("pointLight.ambient", programState->pointLight.ambient);
-        ourShader.setVec3("pointLight.diffuse", programState->pointLight.diffuse);
-        ourShader.setVec3("pointLight.specular", programState->pointLight.specular);
-        ourShader.setFloat("pointLight.constant", programState->pointLight.constant);
-        ourShader.setFloat("pointLight.linear", programState->pointLight.linear);
-        ourShader.setFloat("pointLight.quadratic", programState->pointLight.quadratic);
-        ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
-
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
-
         // render models
         // ------------------------------------------
         // ROSES
+        ourShader.use();
         glm::mat4 modelRose1 = glm::mat4(1.0f);
         modelRose1 = glm::translate(modelRose1,rosePos[0]);
         if(programState->rose1Collected) {
@@ -608,12 +588,6 @@ int main() {
         ourShader.setMat4("model", modelRose3);
         roseModel.Draw(ourShader);
 
-        glm::vec3 pointLightPosition = glm::vec3(0.0f, 20.0f, 0.0f);
-
-        ourShader.use();
-        ourShader.setVec3("light.position", pointLightPosition);
-
-
         // draw skybox
         //___________________________________________________________________________________________
         glDepthMask(GL_FALSE);
@@ -638,33 +612,22 @@ int main() {
         double zpos = programState->camera.Front.z;
         double zoom = programState->camera.Zoom;
 
-            /*
-            std::cout << "X: ";
-            std::cout << xpos << std::endl;
-            std::cout << "Y: ";
-            std::cout << ypos <<  std::endl;
-            std::cout << "Z: ";
-            std::cout << zpos << std::endl;
-            std::cout << "Zoom:";
-            std::cout << zoom << std::endl;
-            */
         if ((xpos + 0.13) + (ypos + 0.065) + (zpos + 0.99) < 0.1 && zoom <= 7 && zoom >= 3 && programState->gameStart) {
-            lightOn = true;
+            spotLightOn = true;
         }
         else if ((xpos - 0.21) + (ypos - 0.1) + (zpos + 0.98) < 0.1 && zoom <= 8 && zoom >= 3 && programState->gameStart) {
-            lightOn = true;
+            spotLightOn = true;
         }
         else if ((xpos - 0.67) + (ypos + 0.23) + (zpos + 0.72) < 0.1 && zoom <= 7 && zoom >= 3 && programState->gameStart) {
-            lightOn = true;
+            spotLightOn = true;
         }
         else {
-            lightOn = false;
+            spotLightOn = false;
         }
 
         if (programState->ImGuiEnabled) {
             DrawImGui(programState);
         }
-
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -674,8 +637,8 @@ int main() {
     glDeleteVertexArrays(1, &skyboxVAO);
     glDeleteBuffers(1, &skyboxVBO);
 
-   // glDeleteVertexArrays(1, &cubeVAO);
-    //glDeleteBuffers(1, &cubeVBO);
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteBuffers(1, &cubeVBO);
 
     programState->SaveToFile("resources/program_state.txt");
     delete programState;
@@ -706,25 +669,54 @@ void processInput(GLFWwindow *window) {
 
      */
 
-    // spotlight
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !lKeyPressed){
-        lightOn = !lightOn;
+        spotLightOn = !spotLightOn;
         lKeyPressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE)
     {
         lKeyPressed = false;
     }
-
     //point light
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS && !kKeyPressed){
         pointLightOn = !pointLightOn;
         kKeyPressed = true;
     }
-
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_RELEASE)
     {
         kKeyPressed = false;
+    }
+    //hdr
+    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS && !hdrKeyPressed)
+    {
+        hdr = !hdr;
+        hdrKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_H) == GLFW_RELEASE)
+    {
+        hdrKeyPressed = false;
+    }
+    //exposure
+    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+    {
+        if (exposure > 0.0f)
+            exposure -= 0.01f;
+        else
+            exposure = 0.0f;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
+    {
+        exposure += 0.01f;
+    }
+    //bloom
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !bloomKeyPressed)
+    {
+        bloom = !bloom;
+        bloomKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
+    {
+        bloomKeyPressed = false;
     }
 
 }
@@ -927,7 +919,8 @@ unsigned int loadTexture(char const * path)
     return textureID;
 }
 
-void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight, vector<glm::vec3> lightPos) {
+void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotLight spotLight) {
+
     ourShader.use();
 
     ourShader.setVec3("dirLight.direction", dirLight.direction);
@@ -937,24 +930,43 @@ void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotL
 
     ourShader.setInt("pointLightOn", pointLightOn);
 
-    for(unsigned int i=1; i<=8; ++i){
-        ourShader.setVec3("pointLight" + std::to_string(i) + ".position", lightPos[i-1]);
-        ourShader.setVec3("pointLight" + std::to_string(i) + ".ambient", pointLight.ambient);
-        ourShader.setVec3("pointLight" + std::to_string(i) + ".diffuse", pointLight.diffuse);
-        ourShader.setVec3("pointLight" + std::to_string(i) + ".specular", pointLight.specular);
-        ourShader.setFloat("pointLight" + std::to_string(i) + ".constant", pointLight.constant);
-        ourShader.setFloat("pointLight" + std::to_string(i) + ".linear", pointLight.linear);
-        ourShader.setFloat("pointLight" + std::to_string(i) + ".quadratic", pointLight.quadratic);
-    }
+    pointLight.position = glm::vec3(40.0f, 3.5, -13.0f);
 
-    ourShader.setVec3("light.ambient", glm::vec3(2.0, 1.5, 0.1));
-    ourShader.setVec3("light.diffuse", pointLight.diffuse);
-    ourShader.setVec3("light.specular", glm::vec3(0.7, 0.6, 0.5));
-    ourShader.setFloat("light.constant", pointLight.constant);
-    ourShader.setFloat("light.linear", pointLight.linear);
-    ourShader.setFloat("light.quadratic", pointLight.quadratic);
+    ourShader.setVec3("pointLight1.position", pointLight.position);
+    ourShader.setVec3("pointLight1.ambient", pointLight.ambient);
+    ourShader.setVec3("pointLight1.diffuse", pointLight.diffuse);
+    ourShader.setVec3("pointLight1.specular", pointLight.specular);
+    ourShader.setFloat("pointLight1.constant", pointLight.constant);
+    ourShader.setFloat("pointLight1.linear", pointLight.linear);
+    ourShader.setFloat("pointLight1.quadratic", pointLight.quadratic);
+    ourShader.setVec3("viewPosition", programState->camera.Position);
+    ourShader.setFloat("material.shininess", 32.0f);
 
-    ourShader.setInt("lightOn", lightOn);
+    pointLight.position = glm::vec3(57.0f, 0.5f, -10.0f);
+
+    ourShader.setVec3("pointLight2.position", pointLight.position);
+    ourShader.setVec3("pointLight2.ambient", pointLight.ambient);
+    ourShader.setVec3("pointLight2.diffuse", pointLight.diffuse);
+    ourShader.setVec3("pointLight2.specular", pointLight.specular);
+    ourShader.setFloat("pointLight2.constant", pointLight.constant);
+    ourShader.setFloat("pointLight2.linear", pointLight.linear);
+    ourShader.setFloat("pointLight2.quadratic", pointLight.quadratic);
+    ourShader.setVec3("viewPosition", programState->camera.Position);
+    ourShader.setFloat("material.shininess", 32.0f);
+
+    pointLight.position = glm::vec3(57.0f, -3.5f, -12.0f);
+
+    ourShader.setVec3("pointLight3.position", pointLight.position);
+    ourShader.setVec3("pointLight3.ambient", pointLight.ambient);
+    ourShader.setVec3("pointLight3.diffuse", pointLight.diffuse);
+    ourShader.setVec3("pointLight3.specular", pointLight.specular);
+    ourShader.setFloat("pointLight3.constant", pointLight.constant);
+    ourShader.setFloat("pointLight3.linear", pointLight.linear);
+    ourShader.setFloat("pointLight3.quadratic", pointLight.quadratic);
+    ourShader.setVec3("viewPosition", programState->camera.Position);
+    ourShader.setFloat("material.shininess", 32.0f);
+
+    ourShader.setInt("spotLightOn", spotLightOn);
     ourShader.setVec3("spotLight.position", programState->camera.Position);
     ourShader.setVec3("spotLight.direction", programState->camera.Front);
     ourShader.setVec3("spotLight.ambient", spotLight.ambient);
@@ -967,5 +979,4 @@ void setShader(Shader ourShader, DirLight dirLight, PointLight pointLight, SpotL
     ourShader.setFloat("spotLight.outerCutOff", spotLight.outerCutOff);
 
 }
-
 
