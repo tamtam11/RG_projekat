@@ -6,7 +6,7 @@
 2. U kutijama koje imaju evropsku zastavu kriju se ruže.
 3. Cilj je sakupite sve ruže za 60 sekundi. 
 4. Pritskom na `enter` pokreće se igrica i tajmer, a gasi se osvetljenje.
-5. Kada se dovoljno približemo pravoj kutiji uključiće se spot light kao znak da možemo da sakupimo ružu.
+5. Kada se dovoljno približimo pravoj kutiji uključiće se spot light kao znak da možemo da sakupimo ružu.
 6. To činimo pritiskom na taster `space`. 
 7. Kada sakupimo sve ruže, osvetljenje se ponovo pali. 
 
